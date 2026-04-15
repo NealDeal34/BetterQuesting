@@ -39,7 +39,7 @@ public class SlicedTexture implements IGuiTexture {
         if (width <= 0 || height <= 0) return;
         if (texture == null) return;
 
-        GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT);
+        GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
         GL11.glPushMatrix();
 
         try {
@@ -178,7 +178,6 @@ public class SlicedTexture implements IGuiTexture {
         } finally {
             GL11.glPopMatrix();
             GL11.glPopAttrib();
-            while (GL11.glGetError() != GL11.GL_NO_ERROR);
         }
     }
 
