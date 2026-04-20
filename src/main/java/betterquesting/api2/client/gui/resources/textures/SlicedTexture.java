@@ -1,6 +1,7 @@
 package betterquesting.api2.client.gui.resources.textures;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
@@ -38,218 +39,137 @@ public class SlicedTexture implements IGuiTexture {
     @Override
     public void drawTexture(int x, int y, int width, int height, float zLevel, float partialTick, IGuiColor color) {
         if (width <= 0 || height <= 0) return;
-        if (texture == null) return;
 
-        int prevTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        int w = Math.max(width, texBorder.getLeft() + texBorder.getRight());
+        int h = Math.max(height, texBorder.getTop() + texBorder.getBottom());
+        int dx = x;
+        int dy = y;
 
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glPushMatrix();
+        if (color != null) color.applyGlColor();
 
-        try {
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glEnable(GL11.GL_BLEND);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
 
-            int w = Math.max(width, texBorder.getLeft() + texBorder.getRight());
-            int h = Math.max(height, texBorder.getTop() + texBorder.getBottom());
-            int dx = x;
-            int dy = y;
+        if (w != width || h != height) {
+            dx = 0;
+            dy = 0;
+            GL11.glTranslatef(x, y, 0);
+            GL11.glScaled(width / (double) w, height / (double) h, 1D);
+        }
 
-            applyGlColorSafe(color);
+        if (sliceMode == SliceMode.SLICED_TILE) {
+            drawContinuousTexturedBox(
+                texture,
+                dx,
+                dy,
+                texBounds.getX(),
+                texBounds.getY(),
+                w,
+                h,
+                texBounds.getWidth(),
+                texBounds.getHeight(),
+                texBorder.getTop(),
+                texBorder.getBottom(),
+                texBorder.getLeft(),
+                texBorder.getRight(),
+                zLevel);
+        } else if (sliceMode == SliceMode.SLICED_STRETCH) {
+            int iu = texBounds.getX() + texBorder.getLeft();
+            int iv = texBounds.getY() + texBorder.getTop();
+            int iw = texBounds.getWidth() - texBorder.getLeft() - texBorder.getRight();
+            int ih = texBounds.getHeight() - texBorder.getTop() - texBorder.getBottom();
 
-            boolean needScale = (w != width || h != height);
-            if (needScale) {
-                dx = 0;
-                dy = 0;
-                GL11.glTranslatef(x, y, 0);
-                GL11.glScaled(width / (double) w, height / (double) h, 1D);
-            }
+            float sx = (float) (w - (texBounds.getWidth() - iw)) / (float) iw;
+            float sy = (float) (h - (texBounds.getHeight() - ih)) / (float) ih;
 
-            if (sliceMode == SliceMode.SLICED_TILE) {
-                drawContinuousTexturedBox(
-                    texture,
-                    dx,
-                    dy,
-                    texBounds.getX(),
-                    texBounds.getY(),
-                    w,
-                    h,
-                    texBounds.getWidth(),
-                    texBounds.getHeight(),
-                    texBorder.getTop(),
-                    texBorder.getBottom(),
-                    texBorder.getLeft(),
-                    texBorder.getRight(),
-                    zLevel);
+            Minecraft.getMinecraft().renderEngine.bindTexture(texture);
 
-            } else if (sliceMode == SliceMode.SLICED_STRETCH) {
-                int iu = texBounds.getX() + texBorder.getLeft();
-                int iv = texBounds.getY() + texBorder.getTop();
-                int iw = texBounds.getWidth() - texBorder.getLeft() - texBorder.getRight();
-                int ih = texBounds.getHeight() - texBorder.getTop() - texBorder.getBottom();
-
-                float sx = (iw > 0) ? (float) (w - texBorder.getLeft() - texBorder.getRight()) / iw : 1F;
-                float sy = (ih > 0) ? (float) (h - texBorder.getTop() - texBorder.getBottom()) / ih : 1F;
-                sx = safeScale(sx);
-                sy = safeScale(sy);
-
-                Minecraft.getMinecraft()
-                    .getTextureManager()
-                    .bindTexture(texture);
-
-                drawCorner(dx, dy, texBounds.getX(), texBounds.getY(), texBorder.getLeft(), texBorder.getTop(), zLevel);
-                drawCorner(
-                    dx + texBorder.getLeft(),
-                    dy,
-                    texBounds.getX() + texBorder.getLeft(),
-                    texBounds.getY(),
-                    iw,
-                    texBorder.getTop(),
-                    zLevel,
-                    sx,
-                    1F);
-                drawCorner(
-                    dx + w - texBorder.getRight(),
-                    dy,
-                    texBounds.getX() + texBorder.getLeft() + iw,
-                    texBounds.getY(),
-                    texBorder.getRight(),
-                    texBorder.getTop(),
-                    zLevel);
-
-                drawCorner(
-                    dx,
-                    dy + texBorder.getTop(),
-                    texBounds.getX(),
-                    texBounds.getY() + texBorder.getTop(),
-                    texBorder.getLeft(),
-                    ih,
-                    zLevel,
-                    1F,
-                    sy);
-                drawCorner(dx + texBorder.getLeft(), dy + texBorder.getTop(), iu, iv, iw, ih, zLevel, sx, sy);
-                drawCorner(
-                    dx + w - texBorder.getRight(),
-                    dy + texBorder.getTop(),
-                    texBounds.getX() + texBorder.getLeft() + iw,
-                    texBounds.getY() + texBorder.getTop(),
-                    texBorder.getRight(),
-                    ih,
-                    zLevel,
-                    1F,
-                    sy);
-
-                drawCorner(
-                    dx,
-                    dy + h - texBorder.getBottom(),
-                    texBounds.getX(),
-                    texBounds.getY() + texBorder.getTop() + ih,
-                    texBorder.getLeft(),
-                    texBorder.getBottom(),
-                    zLevel);
-                drawCorner(
-                    dx + texBorder.getLeft(),
-                    dy + h - texBorder.getBottom(),
-                    texBounds.getX() + texBorder.getLeft(),
-                    texBounds.getY() + texBorder.getTop() + ih,
-                    iw,
-                    texBorder.getBottom(),
-                    zLevel,
-                    sx,
-                    1F);
-                drawCorner(
-                    dx + w - texBorder.getRight(),
-                    dy + h - texBorder.getBottom(),
-                    texBounds.getX() + texBorder.getLeft() + iw,
-                    texBounds.getY() + texBorder.getTop() + ih,
-                    texBorder.getRight(),
-                    texBorder.getBottom(),
-                    zLevel);
-
-            } else { // STRETCH
-                float sx = (texBounds.getWidth() > 0) ? (float) w / texBounds.getWidth() : 1F;
-                float sy = (texBounds.getHeight() > 0) ? (float) h / texBounds.getHeight() : 1F;
-                sx = safeScale(sx);
-                sy = safeScale(sy);
-
-                GL11.glTranslatef(dx, dy, 0F);
-                GL11.glScalef(sx, sy, 1F);
-
-                Minecraft.getMinecraft()
-                    .getTextureManager()
-                    .bindTexture(texture);
-                GuiUtils.drawTexturedModalRect(
-                    0,
-                    0,
-                    texBounds.getX(),
-                    texBounds.getY(),
-                    texBounds.getWidth(),
-                    texBounds.getHeight(),
-                    zLevel);
-            }
-
-        } finally {
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, prevTexture);
-
+            // TOP LEFT
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx, dy, 0F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX(), texBounds.getY(), texBorder.getLeft(), texBorder.getTop(), zLevel);
             GL11.glPopMatrix();
-            GL11.glPopAttrib();
+
+            // TOP SIDE
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + texBorder.getLeft(), dy, 0F);
+            GL11.glScalef(sx, 1F, 1F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX() + texBorder.getLeft(), texBounds.getY(), iw, texBorder.getTop(), zLevel);
+            GL11.glPopMatrix();
+
+            // TOP RIGHT
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + w - texBorder.getRight(), dy, 0F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX() + texBorder.getLeft() + iw, texBounds.getY(), texBorder.getRight(), texBorder.getTop(), zLevel);
+            GL11.glPopMatrix();
+
+            // LEFT SIDE
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx, dy + texBorder.getTop(), 0F);
+            GL11.glScalef(1F, sy, 1F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX(), texBounds.getY() + texBorder.getTop(), texBorder.getLeft(), ih, zLevel);
+            GL11.glPopMatrix();
+
+            // MIDDLE
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + texBorder.getLeft(), dy + texBorder.getTop(), 0F);
+            GL11.glScalef(sx, sy, 1F);
+            GuiUtils.drawTexturedModalRect(0, 0, iu, iv, iw, ih, zLevel);
+            GL11.glPopMatrix();
+
+            // RIGHT SIDE
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + w - texBorder.getRight(), dy + texBorder.getTop(), 0F);
+            GL11.glScalef(1F, sy, 1F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX() + texBorder.getLeft() + iw, texBounds.getY() + texBorder.getTop(), texBorder.getRight(), ih, zLevel);
+            GL11.glPopMatrix();
+
+            // BOTTOM LEFT
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx, dy + h - texBorder.getBottom(), 0F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX(), texBounds.getY() + texBorder.getTop() + ih, texBorder.getLeft(), texBorder.getBottom(), zLevel);
+            GL11.glPopMatrix();
+
+            // BOTTOM SIDE
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + texBorder.getLeft(), dy + h - texBorder.getBottom(), 0F);
+            GL11.glScalef(sx, 1F, 1F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX() + texBorder.getLeft(), texBounds.getY() + texBorder.getTop() + ih, iw, texBorder.getBottom(), zLevel);
+            GL11.glPopMatrix();
+
+            // BOTTOM RIGHT
+            GL11.glPushMatrix();
+            GL11.glTranslatef(dx + w - texBorder.getRight(), dy + h - texBorder.getBottom(), 0F);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX() + texBorder.getLeft() + iw, texBounds.getY() + texBorder.getTop() + ih, texBorder.getRight(), texBorder.getBottom(), zLevel);
+            GL11.glPopMatrix();
+        } else {
+            float sx = (float) w / (float) texBounds.getWidth();
+            float sy = (float) h / (float) texBounds.getHeight();
+            GL11.glTranslatef(dx, dy, 0F);
+            GL11.glScalef(sx, sy, 1F);
+
+            OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+
+            Minecraft.getMinecraft().renderEngine.bindTexture(texture);
+            GuiUtils.drawTexturedModalRect(0, 0, texBounds.getX(), texBounds.getY(), texBounds.getWidth(), texBounds.getHeight(), zLevel);
         }
-    }
 
-    private float safeScale(float scale) {
-        if (Float.isNaN(scale) || Float.isInfinite(scale) || scale <= 0f) return 1f;
-        return scale;
-    }
-
-    private void applyGlColorSafe(IGuiColor color) {
-        if (color == null) {
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            return;
-        }
-        try {
-            float r = clampColor(color.getRed());
-            float g = clampColor(color.getGreen());
-            float b = clampColor(color.getBlue());
-            float a = clampColor(color.getAlpha());
-            GL11.glColor4f(r, g, b, a);
-        } catch (Exception ignored) {
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-        }
-    }
-
-    private float clampColor(float value) {
-        if (Float.isNaN(value) || Float.isInfinite(value)) return 1f;
-        return Math.max(0f, Math.min(1f, value));
-    }
-
-    private void drawCorner(int x, int y, int u, int v, int w, int h, float z, float sx, float sy) {
-        if (w <= 0 || h <= 0) return;
-        GL11.glPushMatrix();
-        GL11.glTranslatef(x, y, 0F);
-        if (sx != 1F || sy != 1F) GL11.glScalef(sx, sy, 1F);
-        GuiUtils.drawTexturedModalRect(0, 0, u, v, w, h, z);
         GL11.glPopMatrix();
-    }
-
-    private void drawCorner(int x, int y, int u, int v, int w, int h, float z) {
-        drawCorner(x, y, u, v, w, h, z, 1F, 1F);
     }
 
     @Override
     public ResourceLocation getTexture() {
-        return texture;
+        return this.texture;
     }
 
     @Override
     public IGuiRect getBounds() {
-        return texBounds;
+        return this.texBounds;
     }
 
     public GuiPadding getBorder() {
-        return texBorder;
+        return this.texBorder;
     }
 
     public SlicedTexture setSliceMode(SliceMode mode) {
@@ -259,130 +179,66 @@ public class SlicedTexture implements IGuiTexture {
 
     public static SlicedTexture readFromJson(JsonObject json) {
         ResourceLocation res = new ResourceLocation(JsonHelper.GetString(json, "texture", "minecraft:missingno"));
-        int slice = JsonHelper.GetNumber(json, "sliceMode", 1)
-            .intValue();
+        int slice = JsonHelper.GetNumber(json, "sliceMode", 1).intValue();
+
         JsonObject jOut = JsonHelper.GetObject(json, "coordinates");
-        int ox = JsonHelper.GetNumber(jOut, "u", 0)
-            .intValue();
-        int oy = JsonHelper.GetNumber(jOut, "v", 0)
-            .intValue();
-        int ow = JsonHelper.GetNumber(jOut, "w", 48)
-            .intValue();
-        int oh = JsonHelper.GetNumber(jOut, "h", 48)
-            .intValue();
+        int ox = JsonHelper.GetNumber(jOut, "u", 0).intValue();
+        int oy = JsonHelper.GetNumber(jOut, "v", 0).intValue();
+        int ow = JsonHelper.GetNumber(jOut, "w", 48).intValue();
+        int oh = JsonHelper.GetNumber(jOut, "h", 48).intValue();
+
         JsonObject jIn = JsonHelper.GetObject(json, "border");
-        int il = JsonHelper.GetNumber(jIn, "l", 16)
-            .intValue();
-        int it = JsonHelper.GetNumber(jIn, "t", 16)
-            .intValue();
-        int ir = JsonHelper.GetNumber(jIn, "r", 16)
-            .intValue();
-        int ib = JsonHelper.GetNumber(jIn, "b", 16)
-            .intValue();
+        int il = JsonHelper.GetNumber(jIn, "l", 16).intValue();
+        int it = JsonHelper.GetNumber(jIn, "t", 16).intValue();
+        int ir = JsonHelper.GetNumber(jIn, "r", 16).intValue();
+        int ib = JsonHelper.GetNumber(jIn, "b", 16).intValue();
 
         return new SlicedTexture(res, new GuiRectangle(ox, oy, ow, oh), new GuiPadding(il, it, ir, ib))
             .setSliceMode(SliceMode.values()[slice % 3]);
     }
 
+    // Slightly modified version from GuiUtils.class
     private static void drawContinuousTexturedBox(ResourceLocation res, int x, int y, int u, int v, int width,
         int height, int textureWidth, int textureHeight, int topBorder, int bottomBorder, int leftBorder,
         int rightBorder, float zLevel) {
+        Minecraft.getMinecraft().renderEngine.bindTexture(res);
 
-        if (width <= 0 || height <= 0 || textureWidth <= 0 || textureHeight <= 0) return;
-        if (leftBorder < 0 || rightBorder < 0 || topBorder < 0 || bottomBorder < 0) return;
-
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(res);
+        GL11.glEnable(GL11.GL_BLEND);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
 
         int fillerWidth = textureWidth - leftBorder - rightBorder;
         int fillerHeight = textureHeight - topBorder - bottomBorder;
         if (fillerWidth <= 0 || fillerHeight <= 0) return;
-
         int canvasWidth = width - leftBorder - rightBorder;
         int canvasHeight = height - topBorder - bottomBorder;
-
         int xPasses = canvasWidth / fillerWidth;
         int remainderWidth = canvasWidth % fillerWidth;
         int yPasses = canvasHeight / fillerHeight;
         int remainderHeight = canvasHeight % fillerHeight;
 
+        // Draw Border
         GuiUtils.drawTexturedModalRect(x, y, u, v, leftBorder, topBorder, zLevel);
-        GuiUtils.drawTexturedModalRect(
-            x + leftBorder + canvasWidth,
-            y,
-            u + leftBorder + fillerWidth,
-            v,
-            rightBorder,
-            topBorder,
-            zLevel);
-        GuiUtils.drawTexturedModalRect(
-            x,
-            y + topBorder + canvasHeight,
-            u,
-            v + topBorder + fillerHeight,
-            leftBorder,
-            bottomBorder,
-            zLevel);
-        GuiUtils.drawTexturedModalRect(
-            x + leftBorder + canvasWidth,
-            y + topBorder + canvasHeight,
-            u + leftBorder + fillerWidth,
-            v + topBorder + fillerHeight,
-            rightBorder,
-            bottomBorder,
-            zLevel);
+        GuiUtils.drawTexturedModalRect(x + leftBorder + canvasWidth, y, u + leftBorder + fillerWidth, v, rightBorder, topBorder, zLevel);
+        GuiUtils.drawTexturedModalRect(x, y + topBorder + canvasHeight, u, v + topBorder + fillerHeight, leftBorder, bottomBorder, zLevel);
+        GuiUtils.drawTexturedModalRect(x + leftBorder + canvasWidth, y + topBorder + canvasHeight, u + leftBorder + fillerWidth, v + topBorder + fillerHeight, rightBorder, bottomBorder, zLevel);
 
         for (int i = 0; i < xPasses + (remainderWidth > 0 ? 1 : 0); i++) {
-            int drawW = (i == xPasses ? remainderWidth : fillerWidth);
-            GuiUtils.drawTexturedModalRect(
-                x + leftBorder + i * fillerWidth,
-                y,
-                u + leftBorder,
-                v,
-                drawW,
-                topBorder,
-                zLevel);
-            GuiUtils.drawTexturedModalRect(
-                x + leftBorder + i * fillerWidth,
-                y + topBorder + canvasHeight,
-                u + leftBorder,
-                v + topBorder + fillerHeight,
-                drawW,
-                bottomBorder,
-                zLevel);
+            GuiUtils.drawTexturedModalRect(x + leftBorder + (i * fillerWidth), y, u + leftBorder, v, (i == xPasses ? remainderWidth : fillerWidth), topBorder, zLevel);
+            GuiUtils.drawTexturedModalRect(x + leftBorder + (i * fillerWidth), y + topBorder + canvasHeight, u + leftBorder, v + topBorder + fillerHeight, (i == xPasses ? remainderWidth : fillerWidth), bottomBorder, zLevel);
 
-            for (int j = 0; j < yPasses + (remainderHeight > 0 ? 1 : 0); j++) {
-                int drawH = (j == yPasses ? remainderHeight : fillerHeight);
-                GuiUtils.drawTexturedModalRect(
-                    x + leftBorder + i * fillerWidth,
-                    y + topBorder + j * fillerHeight,
-                    u + leftBorder,
-                    v + topBorder,
-                    drawW,
-                    drawH,
-                    zLevel);
-            }
+            for (int j = 0; j < yPasses + (remainderHeight > 0 ? 1 : 0); j++) GuiUtils.drawTexturedModalRect(
+                x + leftBorder + (i * fillerWidth),
+                y + topBorder + (j * fillerHeight),
+                u + leftBorder,
+                v + topBorder,
+                (i == xPasses ? remainderWidth : fillerWidth),
+                (j == yPasses ? remainderHeight : fillerHeight),
+                zLevel);
         }
 
         for (int j = 0; j < yPasses + (remainderHeight > 0 ? 1 : 0); j++) {
-            int drawH = (j == yPasses ? remainderHeight : fillerHeight);
-            GuiUtils.drawTexturedModalRect(
-                x,
-                y + topBorder + j * fillerHeight,
-                u,
-                v + topBorder,
-                leftBorder,
-                drawH,
-                zLevel);
-            GuiUtils.drawTexturedModalRect(
-                x + leftBorder + canvasWidth,
-                y + topBorder + j * fillerHeight,
-                u + leftBorder + fillerWidth,
-                v + topBorder,
-                rightBorder,
-                drawH,
-                zLevel);
+            GuiUtils.drawTexturedModalRect(x, y + topBorder + (j * fillerHeight), u, v + topBorder, leftBorder, (j == yPasses ? remainderHeight : fillerHeight), zLevel);
+            GuiUtils.drawTexturedModalRect(x + leftBorder + canvasWidth, y + topBorder + (j * fillerHeight), u + leftBorder + fillerWidth, v + topBorder, rightBorder, (j == yPasses ? remainderHeight : fillerHeight), zLevel);
         }
     }
 
