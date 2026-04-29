@@ -68,7 +68,7 @@ public class SlicedTexture implements IGuiTexture {
 
         GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT);
         checkGlError("glPushAttrib");
-        
+
         GL11.glPushMatrix();
         checkGlError("glPushMatrix");
 
@@ -83,7 +83,7 @@ public class SlicedTexture implements IGuiTexture {
 
             GL11.glEnable(GL11.GL_BLEND);
             checkGlError("glEnable(BLEND)");
-            
+
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             checkGlError("glBlendFunc");
 
@@ -92,7 +92,7 @@ public class SlicedTexture implements IGuiTexture {
                 dy = 0;
                 GL11.glTranslatef(x, y, 0);
                 checkGlError("glTranslatef(scale-offset)");
-                
+
                 GL11.glScaled(width / (double) w, height / (double) h, 1D);
                 checkGlError("glScaled");
             }
@@ -131,7 +131,7 @@ public class SlicedTexture implements IGuiTexture {
 
                 drawCorner(dx, dy, texBounds.getX(), texBounds.getY(), texBorder.getLeft(), texBorder.getTop(), zLevel);
                 checkGlError("corner-1");
-                
+
                 drawCorner(
                     dx + texBorder.getLeft(),
                     dy,
@@ -143,7 +143,7 @@ public class SlicedTexture implements IGuiTexture {
                     sx,
                     1F);
                 checkGlError("corner-2");
-                
+
                 drawCorner(
                     dx + w - texBorder.getRight(),
                     dy,
@@ -153,7 +153,7 @@ public class SlicedTexture implements IGuiTexture {
                     texBorder.getTop(),
                     zLevel);
                 checkGlError("corner-3");
-                
+
                 drawCorner(
                     dx,
                     dy + texBorder.getTop(),
@@ -165,10 +165,10 @@ public class SlicedTexture implements IGuiTexture {
                     1F,
                     sy);
                 checkGlError("corner-4");
-                
+
                 drawCorner(dx + texBorder.getLeft(), dy + texBorder.getTop(), iu, iv, iw, ih, zLevel, sx, sy);
                 checkGlError("corner-5(center)");
-                
+
                 drawCorner(
                     dx + w - texBorder.getRight(),
                     dy + texBorder.getTop(),
@@ -180,7 +180,7 @@ public class SlicedTexture implements IGuiTexture {
                     1F,
                     sy);
                 checkGlError("corner-6");
-                
+
                 drawCorner(
                     dx,
                     dy + h - texBorder.getBottom(),
@@ -190,7 +190,7 @@ public class SlicedTexture implements IGuiTexture {
                     texBorder.getBottom(),
                     zLevel);
                 checkGlError("corner-7");
-                
+
                 drawCorner(
                     dx + texBorder.getLeft(),
                     dy + h - texBorder.getBottom(),
@@ -202,7 +202,7 @@ public class SlicedTexture implements IGuiTexture {
                     sx,
                     1F);
                 checkGlError("corner-8");
-                
+
                 drawCorner(
                     dx + w - texBorder.getRight(),
                     dy + h - texBorder.getBottom(),
@@ -218,15 +218,15 @@ public class SlicedTexture implements IGuiTexture {
                 float sy = (texBounds.getHeight() > 0) ? (float) h / texBounds.getHeight() : 1F;
                 GL11.glTranslatef(dx, dy, 0F);
                 checkGlError("glTranslatef(STRETCH)");
-                
+
                 GL11.glScalef(sx, sy, 1F);
                 checkGlError("glScalef(STRETCH)");
-                
+
                 Minecraft.getMinecraft()
                     .getTextureManager()
                     .bindTexture(texture);
                 checkGlError("bindTexture(STRETCH)");
-                
+
                 GuiUtils.drawTexturedModalRect(
                     0,
                     0,
@@ -241,12 +241,12 @@ public class SlicedTexture implements IGuiTexture {
         } finally {
             GL11.glPopMatrix();
             checkGlError("glPopMatrix");
-            
+
             GL11.glPopAttrib();
             checkGlError("glPopAttrib");
-            
+
             // ⚠️ 重要：绝对不要加 while 循环清空错误！
-            // while (GL11.glGetError() != GL11.GL_NO_ERROR); 
+            // while (GL11.glGetError() != GL11.GL_NO_ERROR);
         }
     }
 
@@ -283,21 +283,21 @@ public class SlicedTexture implements IGuiTexture {
 
     private void drawCorner(int x, int y, int u, int v, int w, int h, float z, float sx, float sy) {
         if (w <= 0 || h <= 0) return;
-        
+
         GL11.glPushMatrix();
         checkGlError("corner-pushMatrix");
-        
+
         GL11.glTranslatef(x, y, 0F);
         checkGlError("corner-translate");
-        
+
         if (sx != 1F || sy != 1F) {
             GL11.glScalef(sx, sy, 1F);
             checkGlError("corner-scale");
         }
-        
+
         GuiUtils.drawTexturedModalRect(0, 0, u, v, w, h, z);
         checkGlError("corner-drawModalRect");
-        
+
         GL11.glPopMatrix();
         checkGlError("corner-popMatrix");
     }
