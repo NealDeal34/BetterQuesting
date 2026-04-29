@@ -152,7 +152,6 @@ public class SlicedTexture implements IGuiTexture {
             GL11.glScalef(sx, sy, 1F);
 
             GL11.glEnable(GL11.GL_BLEND);
-            // ✅ 同样使用 2 参数混合函数
             OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
 
             Minecraft.getMinecraft().renderEngine.bindTexture(texture);
